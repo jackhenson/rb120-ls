@@ -1,3 +1,35 @@
+module Viewable
+  def clear_screen
+    prompt "Press any key to continue."
+    gets.chomp
+    system 'clear'
+  end
+
+  def prompt(msg)
+    puts ">> #{msg}"
+  end
+end
+
+module Constants
+  COUNT_TO_WIN = 3
+  COMPUTER_NAMES = ['R2D2', 'Hal', 'Chappie', 'Sonny', 'Number 5']
+  OPTIONS = { 'r' => 'rock', 'p' => 'paper', 'sc' => 'scissors',
+              'l' => 'lizard', 'sp' => 'Spock' }
+  RULES = <<-MSG
+     ------Rules------
+    Scissors cuts paper,
+    paper covers rock,
+    rock crushes lizard,
+    lizard poisons Spock,
+    Spock smashes scissors,
+    scissors decapitates lizard,
+    lizard eats paper,
+    paper disproves Spock,
+    Spock vaporizes rock,
+    rock crushes scissors.
+  MSG
+end
+
 module Moves
   class Move
     protected
@@ -113,6 +145,7 @@ module Moves
 end
 
 class Player
+  include Viewable
   attr_reader :name, :score
 
   def initialize
@@ -141,6 +174,7 @@ class Player
   def reset
     self.moves = []
     self.score = 0
+    system 'clear'
   end
 
   def increase_score
@@ -170,6 +204,7 @@ class Human < Player
   def set_name
     n = ''
     loop do
+      system 'clear'
       puts ">> What's your name?"
       n = gets.chomp
       break unless n.empty?
@@ -181,7 +216,7 @@ class Human < Player
   def select_move
     choice = nil
     loop do
-      puts ">> Choose one: #{Constants::OPTIONS.values.join(', ')}.
+      prompt "Choose one: #{Constants::OPTIONS.values.join(', ')}.
       Type 'r' for rock, 'p' for paper, 'sc' for scissors,
       'l' for lizard, or 'sp' for Spock:"
       choice = gets.chomp.downcase
@@ -195,7 +230,7 @@ class Computer < Player
   private
 
   def set_name
-    self.name = ['R2D2', 'Hal', 'Chappie', 'Sonny', 'Number 5'].sample
+    self.name = Constants::COMPUTER_NAMES.sample
   end
 
   def select_move
@@ -205,6 +240,8 @@ end
 
 # Game Orchestration Engine
 class RPSGame
+  include Viewable
+
   def play
     greeting
     loop do
@@ -236,15 +273,15 @@ class RPSGame
   def display_rules
     answer = ''
     loop do
-      puts ">> Would you like to view the rules? (y/n)"
+      prompt "Would you like to view the rules? (y/n)"
       answer = gets.chomp.downcase
-      break if ['y', 'n'].include? answer
-      puts "Sorry, must be 'y' or 'n'."
+      ['y', 'n'].include?(answer) ? break : puts("Sorry, must be 'y' or 'n'.")
     end
 
-    unless answer != 'y'
-      clear_screen ; puts Constants::RULES ; clear_screen
-    end
+    system 'clear'
+    return unless answer == 'y'
+    puts Constants::RULES
+    clear_screen
   end
 
   def display_goodbye_message
@@ -294,20 +331,13 @@ class RPSGame
   def play_again?
     answer = nil
     loop do
-      puts ">> Would you like to play again? (y/n)"
+      prompt "Would you like to play again? (y/n)"
       answer = gets.chomp
       break if ['y', 'n'].include? answer.downcase
       puts "Sorry, must be y or n."
     end
 
-    return true if answer.downcase == 'y'
-    false
-  end
-
-  def clear_screen
-    puts ">> Press any key to continue."
-    gets.chomp
-    system 'clear'
+    answer.downcase == 'y'
   end
 
   def reset_match_data
@@ -331,23 +361,6 @@ class RPSGame
     update_score
     display_score
   end
-end
-
-module Constants
-  COUNT_TO_WIN = 3
-  OPTIONS = { 'r' => 'rock', 'p' => 'paper', 'sc' => 'scissors', 'l' => 'lizard', 'sp' => 'Spock' }
-  RULES = <<-MSG
-    Scissors cuts paper,
-    paper covers rock,
-    rock crushes lizard,
-    lizard poisons Spock,
-    Spock smashes scissors,
-    scissors decapitates lizard,
-    lizard eats paper,
-    paper disproves Spock,
-    Spock vaporizes rock,
-    rock crushes scissors.
-  MSG
 end
 
 RPSGame.new.play
