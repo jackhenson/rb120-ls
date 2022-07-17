@@ -72,11 +72,6 @@ module Moves
       other_move.scissors? ||
         other_move.lizard?
     end
-
-    def <(other_move)
-      other_move.paper? ||
-        other_move.spock?
-    end
   end
 
   class Paper < Move
@@ -87,11 +82,6 @@ module Moves
     def >(other_move)
       other_move.rock? ||
         other_move.spock?
-    end
-
-    def <(other_move)
-      other_move.scissors? ||
-        other_move.lizard?
     end
   end
 
@@ -104,11 +94,6 @@ module Moves
       other_move.paper? ||
         other_move.lizard?
     end
-
-    def <(other_move)
-      other_move.rock? ||
-        other_move.spock?
-    end
   end
 
   class Lizard < Move
@@ -120,11 +105,6 @@ module Moves
       other_move.paper? ||
         other_move.spock?
     end
-
-    def <(other_move)
-      other_move.rock? ||
-        other_move.scissors?
-    end
   end
 
   class Spock < Move
@@ -135,11 +115,6 @@ module Moves
     def >(other_move)
       other_move.rock? ||
         other_move.scissors?
-    end
-
-    def <(other_move)
-      other_move.paper? ||
-        other_move.lizard?
     end
   end
 end
@@ -297,7 +272,7 @@ class RPSGame
   def display_round_winner
     if human.last_move > computer.last_move
       puts "#{human.name} won!"
-    elsif human.last_move < computer.last_move
+    elsif computer.last_move > human.last_move
       puts "#{computer.name} won!"
     else
       puts "It's a tie!"
@@ -315,7 +290,7 @@ class RPSGame
   def update_score
     if human.last_move > computer.last_move
       human.increase_score
-    elsif human.last_move < computer.last_move
+    elsif computer.last_move > human.last_move
       computer.increase_score
     end
   end
