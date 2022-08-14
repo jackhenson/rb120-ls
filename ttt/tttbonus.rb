@@ -1,4 +1,4 @@
-module Viewable
+module Displayable
   def clear
     system 'clear'
   end
@@ -130,7 +130,7 @@ class Square
 end
 
 class Player
-  include Viewable
+  include Displayable
 
   attr_reader :marker, :score, :name
 
@@ -189,7 +189,7 @@ class Computer < Player
 end
 
 class TTTGame
-  include Viewable
+  include Displayable
 
   attr_reader :board, :human, :computer
 
