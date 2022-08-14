@@ -161,13 +161,13 @@ class Human < Player
     loop do
       prompt "Choose your marker: X or O."
       self.marker = gets.chomp.upcase
-      break if ['X','O'].include? marker
+      break if ['X', 'O'].include? marker
       puts "Please choose either X or O."
     end
   end
-  
+
   private
-  
+
   def set_name
     loop do
       prompt "What is your name?"
@@ -180,7 +180,7 @@ end
 
 class Computer < Player
   attr_writer :marker
-  
+
   private
 
   def set_name
@@ -200,15 +200,11 @@ class TTTGame
   end
 
   def play
-    clear
     display_welcome_message
     loop do
       set_markers
-      set_first_player
-      loop do
-        play_one_round
-        break if human.win_match? || computer.win_match?
-      end
+      self.current_marker = set_first_player
+      play_one_match
       display_match_winner
       play_again? ? clear_screen_and_reset_scores : break
     end
@@ -218,6 +214,17 @@ class TTTGame
   private
 
   attr_accessor :first_player, :current_marker
+
+  def someone_won_match?
+    human.win_match? || computer.win_match?
+  end
+
+  def play_one_match
+    loop do
+      play_one_round
+      break if someone_won_match?
+    end
+  end
 
   def play_one_round
     display_board
@@ -232,17 +239,15 @@ class TTTGame
 
   def set_markers
     human.set_marker
-    human.marker == "X" ? computer.marker = 'O' : computer.marker = 'X'
+    computer.marker = if human.marker == 'X'
+                        'O'
+                      else
+                        'X'
+                      end
     clear
   end
 
   def set_first_player
-    self.first_player = get_first_player
-    self.current_marker = first_player
-    clear
-  end
-
-  def get_first_player
     first_player = nil
     loop do
       prompt "Who should play first?"
@@ -264,6 +269,7 @@ class TTTGame
   end
 
   def display_welcome_message
+    clear
     puts "Welcome to Tic Tac Toe, #{human.name}!"
     puts "In this match, you'll be facing #{computer.name}, the computer."
     puts "First to win #{Constants::COUNT_TO_WIN} rounds wins the match!"
@@ -310,18 +316,22 @@ class TTTGame
   end
 
   def computer_moves
-    square = nil
-    square = computer_offense_move
-    square = computer_defense_move unless square != nil
-    square = 5 unless square != nil || board[5].marked?
-    square = board.unmarked_keys.sample unless square != nil
-    
+    square = if computer_offense_move
+               computer_offense_move
+             elsif computer_defense_move
+               computer_defense_move
+             elsif board[5].unmarked?
+               5
+             else
+               board.unmarked_keys.sample
+             end
+
     board[square] = computer.marker
   end
 
   def computer_offense_move
     opp_lines = board.find_opportunity_lines
-    return nil if opp_lines == nil
+    return nil if opp_lines.nil?
     opp_lines.each do |line|
       if line.any? { |s| board[s].marker == computer.marker }
         line.each { |s| return s if board[s].unmarked? }
@@ -332,7 +342,7 @@ class TTTGame
 
   def computer_defense_move
     opp_lines = board.find_opportunity_lines
-    return nil if opp_lines == nil
+    return nil if opp_lines.nil?
     opp_lines.each do |line|
       if line.any? { |s| board[s].marker == human.marker }
         line.each { |s| return s if board[s].unmarked? }
