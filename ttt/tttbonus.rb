@@ -204,6 +204,7 @@ class TTTGame
     loop do
       set_markers
       self.current_marker = set_first_player
+      clear
       play_one_match
       display_match_winner
       play_again? ? clear_screen_and_reset_scores : break
