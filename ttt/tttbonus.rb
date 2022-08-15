@@ -249,16 +249,16 @@ class TTTGame
   end
 
   def set_first_player
-    first_player = nil
+    answer = nil
     loop do
       prompt "Who should play first?"
       prompt "Enter 'me' or 'computer':"
-      first_player = gets.chomp.downcase
-      break if ['me', 'computer'].include? first_player
+      answer = gets.chomp.downcase
+      break if ['me', 'computer'].include? answer
       puts "Invalid choice. Please enter 'me' or 'computer'."
     end
 
-    first_player == 'me' ? human.marker : computer.marker
+    self.first_player = answer == 'me' ? human.marker : computer.marker
   end
 
   def player_move
