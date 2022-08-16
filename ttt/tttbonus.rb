@@ -60,6 +60,7 @@ class Board
     nil
   end
 
+  # returns arr of lines with opportunity for offense or defense
   def find_opportunity_lines
     opp_lines = []
     Constants::WINNING_LINES.each do |line|
@@ -67,7 +68,7 @@ class Board
       opp_lines << line if two_identical_markers?(squares)
     end
 
-    opp_lines.empty? ? nil : opp_lines
+    opp_lines
   end
 
   def reset
@@ -202,9 +203,7 @@ class TTTGame
   def play
     display_welcome_message
     loop do
-      set_markers
-      self.current_marker = set_first_player
-      clear
+      setup_match
       play_one_match
       display_match_winner
       play_again? ? clear_screen_and_reset_scores : break
@@ -218,6 +217,12 @@ class TTTGame
 
   def someone_won_match?
     human.win_match? || computer.win_match?
+  end
+
+  def setup_match
+    set_markers
+    self.current_marker = set_first_player
+    clear
   end
 
   def play_one_match
@@ -317,39 +322,54 @@ class TTTGame
   end
 
   def computer_moves
-    square = if computer_offense_move
+    square = if computer_offense_opportunity?
                computer_offense_move
-             elsif computer_defense_move
+             elsif computer_defense_opportunity?
                computer_defense_move
-             elsif board[5].unmarked?
+             elsif middle_square_open?
                5
              else
+               # choose random open square
                board.unmarked_keys.sample
              end
 
     board[square] = computer.marker
   end
 
+  def computer_offense_opportunity?
+    opp_lines = board.find_opportunity_lines
+    return false if opp_lines.empty?
+    opp_lines.each do |line|
+      return true if line.any? { |s| board[s].marker == computer.marker }
+    end
+    false
+  end
+
   def computer_offense_move
     opp_lines = board.find_opportunity_lines
-    return nil if opp_lines.nil?
     opp_lines.each do |line|
       if line.any? { |s| board[s].marker == computer.marker }
         line.each { |s| return s if board[s].unmarked? }
       end
     end
-    nil
+  end
+
+  def computer_defense_opportunity?
+    opp_lines = board.find_opportunity_lines
+    !opp_lines.empty?
   end
 
   def computer_defense_move
     opp_lines = board.find_opportunity_lines
-    return nil if opp_lines.nil?
     opp_lines.each do |line|
       if line.any? { |s| board[s].marker == human.marker }
         line.each { |s| return s if board[s].unmarked? }
       end
     end
-    nil
+  end
+
+  def middle_square_open?
+    board[5].unmarked?
   end
 
   def display_round_winner
@@ -419,6 +439,7 @@ class TTTGame
     current_marker == human.marker
   end
 
+  # player moves and current_marker is swapped
   def current_player_moves
     if human_turn?
       human_moves
