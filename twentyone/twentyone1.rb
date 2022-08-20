@@ -83,4 +83,4 @@ class Game
 end
 
 new_deck = Deck.new
-p new_deck.draw_random_card.point_value
+puts new_deck.cards.size
