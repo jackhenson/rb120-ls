@@ -43,7 +43,13 @@ class Card
   end
 
   def to_s
-    @value + @suite
+    puts "+------+ "
+    puts "| #{@value + @suite}   |"
+    puts "|      |"
+    puts "|      |"
+    puts "|   #{@value + @suite} |"
+    puts "+------+ "
+    puts "The #{@suite} of #{value}."
   end
 
   def point_value
@@ -75,12 +81,14 @@ class Game
   end
 
   def play
-    deal_initial_hand
-    players_turn
-    dealers_turn unless player_bust?
-    display_result
+    deal_cards
+    show_initial_cards
+    player_turn
+    dealer_turn
+    show_result
   end
 end
 
 new_deck = Deck.new
-puts new_deck.cards.size
+puts new_deck.draw_random_card
+
