@@ -77,7 +77,32 @@ module Displayable
     print "."
     sleep 0.5
     print "."
-    puts
+    sleep 0.5
+    print "."
+    sleep 0.5
+    clear
+  end
+
+  def display_one_card_deal
+    clear
+    print "Dealing one card."
+    sleep 0.5
+    print "."
+    sleep 0.5
+    print "."
+    sleep 0.5
+    clear
+  end
+
+  def joinor(arr, deliminator=', ', word='and')
+    case arr.size
+    when 0 then ''
+    when 1 then arr.first
+    when 2 then arr.join(" #{word} ")
+    else
+      arr.append("#{word} #{arr.pop}")
+      arr.join(deliminator)
+    end
   end
 end
 
@@ -106,7 +131,7 @@ class Deck
     names = []
     CARD_VALUES.each do |n|
       CARD_SUITES.each do |s|
-        names << n+s
+        names << [n, s]
       end
     end
     names
@@ -147,7 +172,7 @@ class Card
   end
 
   def to_s
-    "#{value} of #{suite}"
+    value
   end
 
   def point_value
@@ -172,7 +197,27 @@ class Player
   end
 
   def display_hand
-    puts hand
+    puts joinor(hand.map(&:value))
+  end
+
+  def hand_score
+    hand.map(&:point_value).sum
+  end
+
+  def hit?
+    answer = nil
+    loop do
+      prompt "Would you like to hit (h) or stay (s)?"
+      answer = gets.chomp.downcase
+      break if ['h','s'].include? answer
+      puts "Invalid. Please enter 'h' to hit, or 's' to stay."
+    end
+
+    answer == 'h'
+  end
+
+  def bust?
+    hand_score > 21
   end
 end
 
@@ -211,21 +256,33 @@ class Game
 
   def play
     greeting
-    deal_cards
-    show_initial_cards
-    # player_turn
+    initial_deal
+    show_hands_dealer_hidden
+    player_turn
     # dealer_turn
     # show_result
   end
 
   private
 
-  def show_initial_cards
+  def player_turn
+    loop do
+      puts "Your current total hand score is: #{human.hand_score}."
+      human.hit? ? deal_card_to_player : return
+      show_hands_dealer_hidden
+      break if human.bust?
+    end
+
+    puts "You busted!"
+  end
+
+  def show_hands_dealer_hidden
     puts "Your hand:"
     human.display_hand
     puts
     puts "Dealer's hand (1 card hidden):"
     dealer.display_partial_hand
+    puts
   end
 
   def greeting
@@ -234,7 +291,7 @@ class Game
     display_game_overview if display_rules?
   end
 
-  def deal_cards
+  def initial_deal
     display_dealing_message
     deck.shuffle
     human.hand << deck.draw_random_card
@@ -242,6 +299,11 @@ class Game
     dealer.hand << deck.draw_random_card
     dealer.hand << deck.draw_random_card
   end
+
+  def deal_card_to_player
+    display_one_card_deal
+    human.hand << deck.draw_random_card
+  end
 end
 
-game = Game.new.play
+Game.new.play
