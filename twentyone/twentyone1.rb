@@ -1,3 +1,5 @@
+MATCH_SCORE_TO_WIN = 3
+
 module Displayable
   def prompt(msg)
     puts ">> #{msg}"
@@ -17,8 +19,29 @@ module Displayable
     puts <<-MSG
     Welcome to Twenty One, #{human.name}!
     In this game, you'll be playing against the dealer, #{dealer.name}.
+    The first player to win 3 games wins the match. Good luck!
 
     MSG
+  end
+
+  def display_goodbye_message
+    clear
+    puts "Thanks for playing! Goodbye."
+  end
+
+  def display_new_game_message
+    puts "   Preparing new game"
+    sleep 0.5
+    clear
+    puts "  ~Preparing new game~"
+    sleep 0.5
+    clear
+    puts " ~~Preparing new game~~"
+    sleep 0.5
+    clear
+    puts "~~~Preparing new game~~~"
+    sleep 0.5
+    clear
   end
 
   def display_rules?
@@ -64,6 +87,7 @@ module Displayable
   end
 
   def display_game_overview
+    clear
     display_rules
     prompt_clear
     display_scoring_rules
@@ -83,9 +107,20 @@ module Displayable
     clear
   end
 
-  def display_one_card_deal
+  def display_one_card_deal_human
     clear
-    print "Dealing one card."
+    print "Dealing you one card."
+    sleep 0.5
+    print "."
+    sleep 0.5
+    print "."
+    sleep 0.5
+    clear
+  end
+
+  def display_one_card_deal_dealer
+    clear
+    print "Dealing the dealer one card."
     sleep 0.5
     print "."
     sleep 0.5
@@ -144,6 +179,11 @@ class Deck
   def draw_random_card
     cards.pop
   end
+
+  def reset
+    cards.clear
+    add_cards
+  end
 end
 
 class Card
@@ -189,7 +229,7 @@ end
 class Player
   include Displayable
 
-  attr_accessor :name, :hand
+  attr_accessor :name, :hand, :hand_score
 
   def initialize
     @hand = []
@@ -201,7 +241,32 @@ class Player
   end
 
   def hand_score
-    hand.map(&:point_value).sum
+    score = hand.map(&:point_value).sum
+    # special ace scoring rules
+    hand.select { |c| c.value == 'Ace' }.count.times do
+      score -= 10 if score > 21
+    end
+
+    score
+  end
+
+  def bust?
+    hand_score > 21
+  end
+
+  def reset
+    hand.clear
+  end
+end
+
+class Human < Player
+  def set_name
+    loop do
+      prompt "What is your name?"
+      self.name = gets.chomp
+      break unless name.empty?
+      puts "Please enter a valid name."
+    end
   end
 
   def hit?
@@ -215,21 +280,6 @@ class Player
 
     answer == 'h'
   end
-
-  def bust?
-    hand_score > 21
-  end
-end
-
-class Human < Player
-  def set_name
-    loop do
-      prompt "What is your name?"
-      self.name = gets.chomp
-      break unless name.empty?
-      puts "Please enter a valid name."
-    end
-  end
 end
 
 class Dealer < Player
@@ -238,32 +288,140 @@ class Dealer < Player
   end
 
   def display_partial_hand
-    puts hand[0]
+    puts "#{hand[0]} and hidden card"
   end
+
+  def hit?(human_score)
+    hand_score < 17 || hand_score < human_score
+  end
+end
+
+class Scoreboard
+  attr_reader :human_match_score, :dealer_match_score, :ties
+
+  def initialize
+    @human_match_score = 0
+    @dealer_match_score = 0
+    @ties = 0
+  end
+
+  def display(dealers_name)
+    puts "--- Current Match Score ---"
+    puts "You: #{human_match_score} game(s) won."
+    puts "#{dealers_name}: #{dealer_match_score} game(s) won."
+    puts "Ties: #{ties}"
+    puts
+  end
+
+  def increase_human_score
+    self.human_match_score += 1
+  end
+
+  def increase_dealer_score
+    self.dealer_match_score += 1
+  end
+
+  def increase_tie_score
+    self.ties += 1
+  end
+
+  def someone_won_match?
+    @human_match_score >= MATCH_SCORE_TO_WIN ||
+      @dealer_match_score >= MATCH_SCORE_TO_WIN
+  end
+
+  def reset
+    @human_match_score = 0
+    @dealer_match_score = 0
+    @ties = 0
+  end
+
+  private
+
+  attr_writer :human_match_score, :dealer_match_score, :ties
 end
 
 # orchestration engine
 class Game
   include Displayable
 
-  attr_accessor :deck, :human, :dealer
+  attr_reader :deck, :human, :dealer, :scoreboard
 
   def initialize
     @deck = Deck.new
     @human = Human.new
     @dealer = Dealer.new
+    @scoreboard = Scoreboard.new
   end
 
   def play
     greeting
-    initial_deal
-    show_hands_dealer_hidden
-    player_turn
-    # dealer_turn
-    # show_result
+    loop do
+      clear
+      play_one_match
+      display_match_winner
+      play_again? ? reset_scores : break
+    end
+    display_goodbye_message
   end
 
   private
+
+  def reset_scores
+    clear
+    scoreboard.reset
+  end
+
+  def display_match_winner
+    if scoreboard.human_match_score >= MATCH_SCORE_TO_WIN
+      puts "You've won the match! Congratulations!"
+    else
+      puts "#{dealer.name} has won the match. Better luck next time!"
+    end
+  end
+
+  def play_again?
+    puts
+    answer = nil
+    loop do
+      prompt "Would you like to play again? (y/n)"
+      answer = gets.chomp.downcase
+      break if ['y', 'yes', 'n', 'no'].include? answer
+      puts "Sorry, invalid response. Please answer 'y' or 'n'."
+    end
+
+    answer == 'y' || answer == 'yes'
+  end
+
+  def play_one_match
+    loop do
+      play_one_game
+      break if scoreboard.someone_won_match?
+    end
+  end
+
+  def play_one_game
+    display_new_game_message
+    deck.shuffle
+    initial_deal
+    show_hands_dealer_hidden
+    player_turn
+    dealer_turn unless human.bust?
+    show_result
+    update_score
+    scoreboard.display(dealer.name)
+    reset
+    prompt_clear
+  end
+
+  def show_result
+    puts "This game is over!"
+    puts
+    display_hand_scores
+    display_game_winner
+    puts
+    prompt_clear
+  end
 
   def player_turn
     loop do
@@ -273,15 +431,67 @@ class Game
       break if human.bust?
     end
 
-    puts "You busted!"
+    puts "Sorry, you busted!"
+    prompt_clear
+  end
+
+  def dealer_turn
+    puts "#{dealer.name}'s turn!"
+    while dealer.hit?(human.hand_score)
+      deal_card_to_dealer
+      show_hands
+      display_hand_scores
+      puts "#{dealer.name} busted!" if dealer.bust?
+      prompt_clear
+    end
+  end
+
+  def display_game_winner
+    if (human.hand_score > dealer.hand_score && human.hand_score <= 21) ||
+      (human.hand_score <= 21 && dealer.bust?)
+      puts "You've won this game!"
+    elsif (dealer.hand_score > human.hand_score && dealer.hand_score <= 21) ||
+      (human.bust?)
+      puts "#{dealer.name} won this game!"
+    elsif human.hand_score == dealer.hand_score
+      puts "It's a tie!"
+    end
+  end
+
+  def update_score
+    if (human.hand_score > dealer.hand_score && human.hand_score <= 21) ||
+      (human.hand_score <= 21 && dealer.bust?)
+      scoreboard.increase_human_score
+    elsif (dealer.hand_score > human.hand_score && dealer.hand_score <= 21) ||
+      (human.bust?)
+      scoreboard.increase_dealer_score
+    elsif human.hand_score == dealer.hand_score
+      scoreboard.increase_tie_score
+    end
+  end
+
+  def display_hand_scores
+    puts "---Hand scores---"
+    puts "Your hand total: #{human.hand_score}"
+    puts "#{dealer.name}'s hand total: #{dealer.hand_score}"
+    puts
   end
 
   def show_hands_dealer_hidden
     puts "Your hand:"
     human.display_hand
     puts
-    puts "Dealer's hand (1 card hidden):"
+    puts "#{dealer.name}'s hand (1 card hidden):"
     dealer.display_partial_hand
+    puts
+  end
+
+  def show_hands
+    puts "Your hand:"
+    human.display_hand
+    puts
+    puts "#{dealer.name}'s hand:"
+    dealer.display_hand
     puts
   end
 
@@ -293,16 +503,24 @@ class Game
 
   def initial_deal
     display_dealing_message
-    deck.shuffle
-    human.hand << deck.draw_random_card
-    human.hand << deck.draw_random_card
-    dealer.hand << deck.draw_random_card
-    dealer.hand << deck.draw_random_card
+    2.times { human.hand << deck.draw_random_card }
+    2.times { dealer.hand << deck.draw_random_card }
   end
 
   def deal_card_to_player
-    display_one_card_deal
+    display_one_card_deal_human
     human.hand << deck.draw_random_card
+  end
+
+  def deal_card_to_dealer
+    display_one_card_deal_dealer
+    dealer.hand << deck.draw_random_card
+  end
+
+  def reset
+    deck.reset
+    human.reset
+    dealer.reset
   end
 end
 
